@@ -1,34 +1,29 @@
+import pageRoutes from './routes';
 import { pathToRegex, getParams, getQueryParams } from './utils';
-
-import articlesPage from '@/pages/articles.js';
-import articlePage from '@/pages/article.js';
-import designPage from '@/pages/design.js';
-import notFoundPage from '@/pages/not-found';
 
 const nav = document.querySelector('.nav');
 
-const routes = [
-  { path: '/', page: articlesPage },
-  { path: '/articles/:id', page: articlePage },
-  { path: '/design', page: designPage },
-];
-
-const renderRoute = async () => {
-  const potentialMatches = routes.map((route) => ({
+const findRoute = (routes, pathname) => {
+  const allRoutes = routes.map((route) => ({
     route,
-    result: location.pathname.match(pathToRegex(route.path)),
+    matchedPathInfo:
+      route.path === '*' ? [pathname] : pathname.match(pathToRegex(route.path)),
   }));
 
-  const match = potentialMatches.find(
-    (potentialMatch) => potentialMatch.result !== null,
-  ) ?? {
-    route: { path: '/not-found', page: notFoundPage },
-    result: [location.pathname],
-  };
+  return allRoutes.find((route) => route.matchedPathInfo !== null);
+};
 
-  document.querySelector('#app').innerHTML = match.route.page({
-    params: getParams(match),
-    queryParams: getQueryParams(location.search),
+const renderRoute = () => {
+  const targetRoute = findRoute(pageRoutes, location.pathname);
+
+  if (!targetRoute) return;
+
+  const params = getParams(targetRoute);
+  const queryParams = getQueryParams(location);
+
+  document.querySelector('#app').innerHTML = targetRoute.route.page({
+    params,
+    queryParams,
   });
 };
 
@@ -44,8 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
       changeRoute(e.target.href);
     }
   });
-
   renderRoute();
 });
 
 window.addEventListener('popstate', renderRoute);
+
+export { changeRoute, findRoute, renderRoute };
